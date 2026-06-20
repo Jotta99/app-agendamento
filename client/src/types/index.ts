@@ -1,0 +1,52 @@
+export interface Cliente {
+  id: number;
+  nome: string;
+  telefone: string | null;
+  instagram: string | null;
+  observacao: string | null;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface Servico {
+  id: number;
+  nome: string;
+  descricao: string | null;
+  duracao_minuto: number;
+  valor: number;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export type StatusAgendamento =
+  | 'AGENDADO'
+  | 'CONCLUIDO'
+  | 'CANCELADO'
+  | 'FALTOU';
+
+export interface Agendamento {
+  id: number;
+  cliente_id: number;
+  servico_id: number;
+  data: string;
+  hora_inicio: string;
+  hora_fim: string;
+  valor: number;
+  observacao: string | null;
+  status: StatusAgendamento;
+  pago: boolean;
+  cliente?: Cliente;
+  servico?: Servico;
+}
+
+export interface ResumoDia {
+  data: string;
+  total_agendamentos: number;
+  receita_prevista: number;
+  proximo_atendimento: Agendamento | null;
+  agendamentos: Agendamento[];
+}
+
+export interface Usuario {
+  nome: string;
+}
