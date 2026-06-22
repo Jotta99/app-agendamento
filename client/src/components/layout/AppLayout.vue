@@ -13,11 +13,7 @@ import MobileNav from './MobileNav.vue';
       <div
         class="flex items-center gap-2.5 px-5 pt-6 lg:hidden"
       >
-        <div
-          class="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-primary-deep font-display text-base font-semibold text-white shadow-glow"
-        >
-          A
-        </div>
+        <img src="/assets/icone.png" alt="Agenda" class="h-9 w-9 object-contain" />
         <span class="font-display text-lg font-semibold text-ink">Agenda</span>
       </div>
 

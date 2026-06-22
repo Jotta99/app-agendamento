@@ -17,15 +17,8 @@ function sair() {
     class="sticky top-0 z-[2] hidden h-screen w-64 shrink-0 flex-col border-r border-line bg-card px-4 py-7 lg:flex"
   >
     <!-- Marca -->
-    <div class="mb-9 flex items-center gap-3 px-2">
-      <div
-        class="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-primary to-primary-deep font-display text-xl font-semibold text-white shadow-glow"
-      >
-        A
-      </div>
-      <div class="leading-tight">
-        <p class="font-display text-lg font-semibold text-ink">Agenda</p>
-      </div>
+    <div class="mb-9 px-2">
+      <p class="font-display text-lg font-semibold text-ink">Agenda</p>
     </div>
 
     <!-- Navegação -->

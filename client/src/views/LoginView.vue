@@ -31,11 +31,11 @@ async function entrar() {
     <div class="relative z-[1] w-full max-w-sm animate-fade-up">
       <!-- Cabeçalho da marca -->
       <div class="mb-8 text-center">
-        <div
-          class="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-3xl bg-gradient-to-br from-primary to-primary-deep font-display text-3xl font-semibold text-white shadow-glow"
-        >
-          A
-        </div>
+        <img
+          src="/assets/icone.png"
+          alt="Agenda"
+          class="mx-auto mb-5 h-16 w-16 object-contain"
+        />
         <p class="text-[11px] uppercase tracking-[0.3em] text-primary-deep">
           Agenda
         </p>
