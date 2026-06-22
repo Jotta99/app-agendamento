@@ -95,20 +95,20 @@ sozinha (`DB_SYNC=true`). Você verá no log:
 
 ```bash
 cd client
-cp .env.example .env      # VITE_API_URL pode ficar vazio (descobre a API pelo host)
 yarn install
 yarn serve                # app em http://localhost:5173
 ```
 
-> Acessando pelo IP da rede (ex.: celular em `http://192.168.x.x:5173`), o front
-> descobre a API no mesmo host (`http://192.168.x.x:3000/api`) automaticamente —
-> basta deixar `VITE_API_URL` vazio.
+> Não há `.env` no client: o Vite lê o **mesmo** `server/.env` (via `envDir`).
+> O front chama `/api` e, em dev, o Vite faz proxy para a API na porta 3000 —
+> funciona em localhost e pelo IP da rede (ex.: celular em `http://192.168.x.x:5173`).
 
 ---
 
 ## Variáveis de ambiente
 
-### Server (`server/.env`) — veja [`.env.example`](server/.env.example)
+Tudo num **único arquivo**: `server/.env` (a API e o front leem dele). Veja
+[`server/.env.example`](server/.env.example).
 
 | Variável        | Obrigatória | Padrão               | Descrição                                                    |
 | --------------- | :---------: | -------------------- | ------------------------------------------------------------ |
@@ -126,17 +126,13 @@ yarn serve                # app em http://localhost:5173
 | `JWT_SECRET`    |   **sim**   | —                    | Segredo do JWT (mín. 32 caracteres)                          |
 | `JWT_EXPIRES_IN`|     não     | `1d`                 | Validade do token                                            |
 | `AUTH_SENHA`    |   **sim**   | —                    | Senha única de acesso (mín. 6). O login pede só a senha.     |
+| `SELF_PING_URL` |     não     | —                    | URL pública p/ keep-alive (auto-ping em `/api/health`). No Render usa a `RENDER_EXTERNAL_URL`. |
+| `VITE_API_URL`  |     não     | `/api`               | **Front.** Vazio = `/api` na mesma origem (dev via proxy do Vite). Só preencha se o front estiver em outro domínio. |
 
 > A API valida as variáveis na inicialização (fail-fast): se faltar uma obrigatória
 > ou o `JWT_SECRET` for curto, ela não sobe.
-
-### Client (`client/.env`) — veja [`.env.example`](client/.env.example)
-
-| Variável       | Descrição                                                                 |
-| -------------- | ------------------------------------------------------------------------- |
-| `VITE_API_URL` | URL base da API. **Vazio** = usa `/api` na mesma origem (front servido pela própria API, e em dev via proxy do Vite). Só preencha se a API estiver em outro domínio. |
-
-> ⚠️ Variáveis `VITE_*` são embutidas no bundle público — **nunca** coloque segredos aqui.
+>
+> ⚠️ `VITE_*` são embutidas no bundle público — **nunca** coloque segredos com esse prefixo.
 
 ---
 

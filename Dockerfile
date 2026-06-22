@@ -45,6 +45,7 @@ CMD ["node", "dist/main.js"]
 #   docker build -t app-agendamento .
 #                                    ^ o ponto final é OBRIGATÓRIO
 #                                      (contexto de build = pasta atual)
+#   docker compose up --build
 #
 # Banco na sua máquina (host) — use host.docker.internal:
 #   docker run -p 3000:3000 --env-file ./server/.env \

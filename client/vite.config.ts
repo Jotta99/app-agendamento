@@ -4,6 +4,8 @@ import { fileURLToPath, URL } from 'node:url';
 
 export default defineConfig({
   plugins: [vue()],
+  // .env centralizado em server/ — o Vite lê as VITE_* de lá.
+  envDir: fileURLToPath(new URL('../server', import.meta.url)),
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url)),
