@@ -123,15 +123,18 @@ async function salvar() {
       </div>
 
       <BaseMoneyInput v-model="form.valor" label="Valor" required placeholder="0,00" />
+      <button type="submit" class="hidden"></button>
+    </form>
 
-      <div class="flex gap-3 pt-2">
+    <template #footer>
+      <div class="flex gap-3">
         <BaseButton variant="ghost" block type="button" @click="emit('update:modelValue', false)">
           Cancelar
         </BaseButton>
-        <BaseButton variant="primary" block type="submit" :loading="salvando">
+        <BaseButton variant="primary" block type="button" :loading="salvando" @click="salvar">
           Salvar
         </BaseButton>
       </div>
-    </form>
+    </template>
   </BaseModal>
 </template>

@@ -205,27 +205,29 @@ const rotulo = computed(() =>
         </div>
       </div>
 
-      <!-- Rodapé -->
-      <div class="mt-5 flex items-center justify-between border-t border-line pt-4">
-        <button
-          type="button"
-          class="text-sm text-muted transition hover:text-ink"
-          @click="limpar"
-        >
-          Limpar
-        </button>
-        <div class="flex items-center gap-3">
-          <span v-if="rotulo" class="tnum text-sm font-semibold text-ink">{{ rotulo }}</span>
+      <!-- Rodapé fixo -->
+      <template #footer>
+        <div class="flex items-center justify-between gap-3">
           <button
             type="button"
-            class="rounded-xl bg-primary px-5 py-2 text-sm font-semibold text-white shadow-glow transition hover:bg-primary-dark disabled:opacity-50"
-            :disabled="!rotulo"
-            @click="aberto = false"
+            class="text-sm text-muted transition hover:text-ink"
+            @click="limpar"
           >
-            Confirmar
+            Limpar
           </button>
+          <div class="flex items-center gap-3">
+            <span v-if="rotulo" class="tnum text-sm font-semibold text-ink">{{ rotulo }}</span>
+            <button
+              type="button"
+              class="rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-white shadow-glow transition hover:bg-primary-dark disabled:opacity-50"
+              :disabled="!rotulo"
+              @click="aberto = false"
+            >
+              Confirmar
+            </button>
+          </div>
         </div>
-      </div>
+      </template>
     </BaseModal>
   </div>
 </template>

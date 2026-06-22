@@ -8,7 +8,7 @@ import MobileNav from './MobileNav.vue';
     <Sidebar />
 
     <!-- Conteúdo -->
-    <main class="relative z-[1] flex-1 overflow-x-hidden pb-28 lg:pb-0">
+    <main class="relative flex-1 overflow-x-hidden pb-28 lg:pb-0">
       <!-- Topo mobile com a marca -->
       <div
         class="flex items-center gap-2.5 px-5 pt-6 lg:hidden"

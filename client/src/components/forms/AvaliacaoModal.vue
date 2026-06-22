@@ -80,6 +80,9 @@ async function salvar() {
         </p>
       </div>
 
+    </div>
+
+    <template #footer>
       <div class="flex gap-3">
         <BaseButton variant="ghost" block type="button" @click="emit('update:modelValue', false)">
           Cancelar
@@ -88,6 +91,6 @@ async function salvar() {
           Concluir
         </BaseButton>
       </div>
-    </div>
+    </template>
   </BaseModal>
 </template>

@@ -46,7 +46,7 @@ onMounted(carregar);
     <header class="mb-6 flex flex-wrap items-center justify-between gap-3">
       <div>
         <p class="text-[11px] font-semibold uppercase tracking-[0.2em] text-primary-deep">
-          Seu cardápio
+          Sua lista
         </p>
         <h1 class="mt-1 font-display text-3xl font-semibold text-ink sm:text-4xl">
           Serviços

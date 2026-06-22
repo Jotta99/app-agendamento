@@ -240,15 +240,20 @@ const triggerClasse =
         </span>
       </div>
 
-      <div class="flex gap-3 pt-2">
+      <!-- submit invisível: permite enviar com Enter -->
+      <button type="submit" class="hidden"></button>
+    </form>
+
+    <template #footer>
+      <div class="flex gap-3">
         <BaseButton variant="ghost" block type="button" @click="emit('update:modelValue', false)">
           Cancelar
         </BaseButton>
-        <BaseButton variant="primary" block type="submit" :loading="salvando">
+        <BaseButton variant="primary" block type="button" :loading="salvando" @click="salvar">
           {{ ehRetroativo ? 'Registrar' : 'Agendar' }}
         </BaseButton>
       </div>
-    </form>
+    </template>
 
     <!-- Picker de clientes -->
     <PickerModal

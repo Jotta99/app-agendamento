@@ -147,23 +147,25 @@ function navegar(d: number) {
         </button>
       </div>
 
-      <!-- Rodapé -->
-      <div class="mt-4 flex items-center justify-between border-t border-line pt-3">
-        <button
-          type="button"
-          class="text-sm font-semibold text-primary-deep hover:underline"
-          @click="escolher(hojeISO())"
-        >
-          Hoje
-        </button>
-        <button
-          type="button"
-          class="text-sm text-muted transition hover:text-ink"
-          @click="aberto = false"
-        >
-          Fechar
-        </button>
-      </div>
+      <!-- Rodapé fixo -->
+      <template #footer>
+        <div class="flex items-center justify-between">
+          <button
+            type="button"
+            class="text-sm font-semibold text-primary-deep hover:underline"
+            @click="escolher(hojeISO())"
+          >
+            Hoje
+          </button>
+          <button
+            type="button"
+            class="text-sm text-muted transition hover:text-ink"
+            @click="aberto = false"
+          >
+            Fechar
+          </button>
+        </div>
+      </template>
     </BaseModal>
   </div>
 </template>

@@ -72,19 +72,18 @@ async function salvar() {
       <BasePhoneInput v-model="form.telefone" label="Telefone" />
       <BaseInput v-model="form.instagram" label="Instagram" placeholder="@usuario" />
       <BaseTextarea v-model="form.observacao" label="Observação" placeholder="Preferências, alergias..." />
-      <div class="flex gap-3 pt-2">
-        <BaseButton
-          variant="ghost"
-          block
-          type="button"
-          @click="emit('update:modelValue', false)"
-        >
+      <button type="submit" class="hidden"></button>
+    </form>
+
+    <template #footer>
+      <div class="flex gap-3">
+        <BaseButton variant="ghost" block type="button" @click="emit('update:modelValue', false)">
           Cancelar
         </BaseButton>
-        <BaseButton variant="primary" block type="submit" :loading="salvando">
+        <BaseButton variant="primary" block type="button" :loading="salvando" @click="salvar">
           Salvar
         </BaseButton>
       </div>
-    </form>
+    </template>
   </BaseModal>
 </template>

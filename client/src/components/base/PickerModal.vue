@@ -78,7 +78,7 @@ function escolher(item: any) {
       </BaseInput>
 
       <!-- Lista -->
-      <div class="-mx-1 max-h-72 space-y-1.5 overflow-y-auto px-1 no-scrollbar">
+      <div class="-mx-1 space-y-1.5 px-1">
         <button
           v-for="item in filtrados"
           :key="getKey(item)"
@@ -118,8 +118,10 @@ function escolher(item: any) {
           {{ vazioTexto ?? 'Nada encontrado.' }}
         </p>
       </div>
+    </div>
 
-      <!-- Criar novo -->
+    <!-- Criar novo (rodapé fixo) -->
+    <template #footer>
       <button
         type="button"
         class="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-primary-light bg-primary-tint/60 py-2.5 text-sm font-semibold text-primary-deep transition hover:bg-primary-soft"
@@ -130,6 +132,6 @@ function escolher(item: any) {
         </svg>
         {{ novoLabel ?? 'Novo' }}
       </button>
-    </div>
+    </template>
   </BaseModal>
 </template>
