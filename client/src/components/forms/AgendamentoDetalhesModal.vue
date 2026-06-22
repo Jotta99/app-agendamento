@@ -13,6 +13,8 @@ import BaseModal from '@/components/base/BaseModal.vue';
 import BaseButton from '@/components/base/BaseButton.vue';
 import BaseBadge from '@/components/base/BaseBadge.vue';
 import BaseAvatar from '@/components/base/BaseAvatar.vue';
+import BaseStars from '@/components/base/BaseStars.vue';
+import AvaliacaoModal from './AvaliacaoModal.vue';
 
 const props = defineProps<{
   modelValue: boolean;
@@ -26,6 +28,12 @@ const emit = defineEmits<{
 const { sucesso, erro } = useToast();
 const { confirmar } = useConfirm();
 const processando = ref(false);
+const avaliarAberto = ref(false);
+
+function onConcluido() {
+  emit('alterado');
+  emit('update:modelValue', false);
+}
 
 async function mudarStatus(status: StatusAgendamento) {
   if (!props.agendamento) return;
@@ -134,6 +142,27 @@ async function excluir() {
         <p class="text-ink">{{ agendamento.observacao }}</p>
       </div>
 
+      <!-- Avaliação registrada -->
+      <div
+        v-if="agendamento.avaliacao_atendimento"
+        class="rounded-xl border border-gold/30 bg-gold/5 px-4 py-3 text-sm"
+      >
+        <div class="flex items-center justify-between">
+          <p class="font-medium text-ink">Avaliação</p>
+          <BaseStars
+            :model-value="agendamento.avaliacao_atendimento.avaliacao"
+            readonly
+            :size="18"
+          />
+        </div>
+        <p
+          v-if="agendamento.avaliacao_atendimento.observacao"
+          class="mt-1.5 text-ink"
+        >
+          {{ agendamento.avaliacao_atendimento.observacao }}
+        </p>
+      </div>
+
       <!-- Pagamento -->
       <button
         class="flex w-full items-center justify-between rounded-xl border border-black/10 px-4 py-3 text-sm transition hover:bg-surface"
@@ -159,7 +188,7 @@ async function excluir() {
             variant="success"
             block
             :loading="processando"
-            @click="mudarStatus('CONCLUIDO')"
+            @click="avaliarAberto = true"
           >
             Concluir
           </BaseButton>
@@ -191,5 +220,13 @@ async function excluir() {
         </BaseButton>
       </div>
     </div>
+
+    <!-- Concluir + avaliar -->
+    <AvaliacaoModal
+      v-model="avaliarAberto"
+      :agendamento-id="agendamento?.id ?? null"
+      @concluido="onConcluido"
+    />
   </BaseModal>
 </template>
+

@@ -47,6 +47,11 @@ export const agendamentoService = {
       .patch<Agendamento>(`/agendamento/${id}`, payload)
       .then((r) => r.data);
   },
+  concluir(id: number, payload: { avaliacao: number; observacao?: string }) {
+    return api
+      .post<Agendamento>(`/agendamento/${id}/concluir`, payload)
+      .then((r) => r.data);
+  },
   remover(id: number) {
     return api.delete(`/agendamento/${id}`).then((r) => r.data);
   },

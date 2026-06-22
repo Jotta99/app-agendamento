@@ -2,7 +2,7 @@
 import { computed } from 'vue';
 import type { StatusAgendamento } from '@/types';
 
-const props = defineProps<{ status?: StatusAgendamento; tone?: string }>();
+const props = defineProps<{ status?: StatusAgendamento }>();
 
 const map: Record<
   StatusAgendamento,

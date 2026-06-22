@@ -4,8 +4,17 @@ export interface Cliente {
   telefone: string | null;
   instagram: string | null;
   observacao: string | null;
+  avaliacao_media?: number | null;
+  avaliacao_total?: number;
   created_at?: string;
   updated_at?: string;
+}
+
+export interface AvaliacaoAtendimento {
+  id: number;
+  agendamento_id: number;
+  avaliacao: number;
+  observacao: string | null;
 }
 
 export interface Servico {
@@ -37,6 +46,7 @@ export interface Agendamento {
   pago: boolean;
   cliente?: Cliente;
   servico?: Servico;
+  avaliacao_atendimento?: AvaliacaoAtendimento | null;
 }
 
 export interface ResumoDia {

@@ -3,11 +3,13 @@ import {
   Column,
   DataType,
   ForeignKey,
+  HasOne,
   Model,
   Table,
 } from 'sequelize-typescript';
 import { Cliente } from './cliente.model';
 import { Servico } from './servico.model';
+import { AvaliacaoAtendimento } from './avaliacao-atendimento.model';
 
 export enum StatusAgendamento {
   AGENDADO = 'AGENDADO',
@@ -58,4 +60,7 @@ export class Agendamento extends Model {
 
   @BelongsTo(() => Servico)
   servico: Servico;
+
+  @HasOne(() => AvaliacaoAtendimento)
+  avaliacao_atendimento: AvaliacaoAtendimento;
 }

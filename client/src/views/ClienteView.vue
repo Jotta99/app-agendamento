@@ -4,6 +4,7 @@ import AppLayout from '@/components/layout/AppLayout.vue';
 import BaseButton from '@/components/base/BaseButton.vue';
 import BaseInput from '@/components/base/BaseInput.vue';
 import BaseAvatar from '@/components/base/BaseAvatar.vue';
+import BaseStars from '@/components/base/BaseStars.vue';
 import EmptyState from '@/components/base/EmptyState.vue';
 import LoadingSpinner from '@/components/base/LoadingSpinner.vue';
 import ClienteFormModal from '@/components/forms/ClienteFormModal.vue';
@@ -110,6 +111,12 @@ onMounted(carregar);
               <span v-if="c.instagram">{{ c.instagram }}</span>
               <span v-if="!c.telefone && !c.instagram">Sem contato</span>
             </p>
+            <div v-if="c.avaliacao_total" class="mt-1 flex items-center gap-1.5">
+              <BaseStars :model-value="c.avaliacao_media ?? 0" readonly :size="14" />
+              <span class="text-xs font-medium text-muted">
+                {{ (c.avaliacao_media ?? 0).toFixed(1) }} ({{ c.avaliacao_total }})
+              </span>
+            </div>
           </div>
           <svg class="h-5 w-5 shrink-0 text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />

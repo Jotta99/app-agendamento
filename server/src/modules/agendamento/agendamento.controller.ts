@@ -14,6 +14,7 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { AgendamentoService } from './agendamento.service';
 import { CreateAgendamentoDto } from './dto/create-agendamento.dto';
 import { UpdateAgendamentoDto } from './dto/update-agendamento.dto';
+import { ConcluirAgendamentoDto } from './dto/concluir-agendamento.dto';
 
 // Devolve a data de hoje no formato AAAA-MM-DD (fuso local).
 function hoje(): string {
@@ -54,6 +55,15 @@ export class AgendamentoController {
   @Get(':id')
   findOne(@Param('id', ParseIntPipe) id: number) {
     return this.agendamentoService.findOne(id);
+  }
+
+  // Conclui o atendimento registrando a avaliação (estrelas + observação).
+  @Post(':id/concluir')
+  concluir(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: ConcluirAgendamentoDto,
+  ) {
+    return this.agendamentoService.concluir(id, dto);
   }
 
   @Patch(':id')

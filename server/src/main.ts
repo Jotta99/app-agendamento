@@ -4,6 +4,9 @@ import { Logger, ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Sequelize } from 'sequelize-typescript';
 import helmet from 'helmet';
+import express, { Request, Response, NextFunction } from 'express';
+import { existsSync } from 'fs';
+import { join } from 'path';
 import { AppModule } from './app.module';
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
@@ -56,14 +59,16 @@ async function ensureDatabase(logger: Logger) {
 async function bootstrap() {
   const logger = new Logger('Bootstrap');
 
-  // Garante a existência do banco antes de subir a aplicação.
+  // Tenta garantir a existência do banco antes de subir. Não é fatal: em
+  // Postgres gerenciado (Render, etc.) o banco já existe e o acesso ao banco
+  // administrativo "postgres" costuma ser bloqueado — nesse caso, seguimos.
   try {
     await ensureDatabase(logger);
   } catch (e) {
-    logger.error(
-      `❌ Não foi possível acessar o servidor PostgreSQL: ${(e as Error).message}`,
+    logger.warn(
+      `Verificação automática do banco ignorada (${(e as Error).message}). ` +
+        `O banco precisa já existir.`,
     );
-    process.exit(1);
   }
 
   const app = await NestFactory.create(AppModule);
@@ -85,8 +90,9 @@ async function bootstrap() {
     process.exit(1); // sem banco a API não tem como operar
   }
 
-  // Cabeçalhos HTTP de segurança.
-  app.use(helmet());
+  // Cabeçalhos HTTP de segurança. CSP desligado porque a mesma origem serve o
+  // front (Vue + Google Fonts) — evita bloquear scripts/estilos do app.
+  app.use(helmet({ contentSecurityPolicy: false }));
 
   // CORS: libera a origem configurada + localhost + IPs de rede local
   // (para acessar do celular/tablet pelo IP), bloqueando origens externas.
@@ -120,6 +126,21 @@ async function bootstrap() {
       transformOptions: { enableImplicitConversion: true },
     }),
   );
+
+  // Serve o front (Vue buildado) na mesma origem, quando presente na imagem.
+  // /api/* continua na API; qualquer outra rota GET cai no index.html (SPA).
+  const clientDir = join(__dirname, '..', 'client');
+  const indexHtml = join(clientDir, 'index.html');
+  if (existsSync(indexHtml)) {
+    app.use(express.static(clientDir));
+    app.use((req: Request, res: Response, next: NextFunction) => {
+      if (req.method === 'GET' && !req.path.startsWith('/api')) {
+        return res.sendFile(indexHtml);
+      }
+      next();
+    });
+    logger.log('🖥️  Front sendo servido pela API (mesma origem).');
+  }
 
   const port = config.get<number>('PORT') ?? 3000;
   await app.listen(port, host);

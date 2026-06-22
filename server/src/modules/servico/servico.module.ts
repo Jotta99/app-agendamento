@@ -8,6 +8,5 @@ import { ServicoController } from './servico.controller';
   imports: [SequelizeModule.forFeature([Servico])],
   controllers: [ServicoController],
   providers: [ServicoService],
-  exports: [ServicoService],
 })
 export class ServicoModule {}

@@ -1,15 +1,12 @@
 import axios from 'axios';
 
 // Define a URL da API:
-// - Se VITE_API_URL estiver preenchida, usa ela (produção / caso especial).
-// - Senão, deriva do host atual. Assim, acessando por localhost OU pelo IP da
-//   rede (ex.: celular em http://192.168.x.x:5173), a API aponta para o mesmo
-//   host na porta 3000 — funciona em qualquer dispositivo sem reconfigurar.
+// - Se VITE_API_URL estiver preenchida, usa ela (ex.: front e API em serviços
+//   separados em produção).
+// - Senão, usa "/api" relativo (mesma origem). Funciona quando o NestJS serve
+//   o front no mesmo container, e em dev via proxy do Vite (vite.config.ts).
 const envUrl = import.meta.env.VITE_API_URL?.trim();
-const baseURL =
-  envUrl && envUrl.length > 0
-    ? envUrl
-    : `${window.location.protocol}//${window.location.hostname}:3000/api`;
+const baseURL = envUrl && envUrl.length > 0 ? envUrl : '/api';
 
 const api = axios.create({ baseURL });
 

@@ -11,5 +11,13 @@ export default defineConfig({
   },
   server: {
     port: 5173,
+    // Em dev, encaminha /api para a API local (porta 3000). Assim o front
+    // usa "/api" relativo igual em produção — funciona em localhost e na rede.
+    proxy: {
+      '/api': {
+        target: 'http://localhost:3000',
+        changeOrigin: true,
+      },
+    },
   },
 });

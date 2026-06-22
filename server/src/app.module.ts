@@ -8,7 +8,9 @@ import { envValidationSchema } from './config/env.validation';
 import { Cliente } from './database/models/cliente.model';
 import { Servico } from './database/models/servico.model';
 import { Agendamento } from './database/models/agendamento.model';
+import { AvaliacaoAtendimento } from './database/models/avaliacao-atendimento.model';
 
+import { HealthModule } from './modules/health/health.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { ClienteModule } from './modules/cliente/cliente.module';
 import { ServicoModule } from './modules/servico/servico.module';
@@ -36,7 +38,7 @@ import { AgendamentoModule } from './modules/agendamento/agendamento.module';
         password: config.get<string>('DB_PASSWORD'),
         database: config.get<string>('DB_DATABASE'),
         timezone: config.get<string>('DB_TIMEZONE'),
-        models: [Cliente, Servico, Agendamento],
+        models: [Cliente, Servico, Agendamento, AvaliacaoAtendimento],
         autoLoadModels: true,
         // Sincroniza as tabelas automaticamente a partir dos models (DB_SYNC).
         // Em produção, prefira migrations e mantenha DB_SYNC=false.
@@ -51,6 +53,7 @@ import { AgendamentoModule } from './modules/agendamento/agendamento.module';
       }),
     }),
 
+    HealthModule,
     AuthModule,
     ClienteModule,
     ServicoModule,

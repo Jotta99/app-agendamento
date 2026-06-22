@@ -82,15 +82,6 @@ export function nomeMesAno(iso: string): string {
   });
 }
 
-// "AAAA-MM-DD" -> "qua, 19 jun"
-export function diaCurto(iso: string): string {
-  return dataLocal(iso).toLocaleDateString('pt-BR', {
-    weekday: 'short',
-    day: '2-digit',
-    month: 'short',
-  });
-}
-
 // Número do dia do mês (1–31).
 export function diaDoMes(iso: string): number {
   return dataLocal(iso).getDate();

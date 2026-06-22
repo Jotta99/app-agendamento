@@ -24,4 +24,8 @@ export const envValidationSchema = Joi.object({
   JWT_EXPIRES_IN: Joi.string().default('1d'),
 
   AUTH_SENHA: Joi.string().min(6).required(),
+
+  // URL pública para o auto-ping (keep-alive). Opcional — no Render pode usar
+  // a RENDER_EXTERNAL_URL automática. Sem isso, o keep-alive fica desligado.
+  SELF_PING_URL: Joi.string().uri().optional(),
 });

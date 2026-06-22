@@ -12,8 +12,10 @@ import {
 } from '../../database/models/agendamento.model';
 import { Cliente } from '../../database/models/cliente.model';
 import { Servico } from '../../database/models/servico.model';
+import { AvaliacaoAtendimento } from '../../database/models/avaliacao-atendimento.model';
 import { CreateAgendamentoDto } from './dto/create-agendamento.dto';
 import { UpdateAgendamentoDto } from './dto/update-agendamento.dto';
+import { ConcluirAgendamentoDto } from './dto/concluir-agendamento.dto';
 
 // Status que efetivamente ocupam um horário na agenda.
 const STATUS_OCUPA_HORARIO = [
@@ -28,6 +30,8 @@ export class AgendamentoService {
     private readonly agendamentoModel: typeof Agendamento,
     @InjectModel(Servico) private readonly servicoModel: typeof Servico,
     @InjectModel(Cliente) private readonly clienteModel: typeof Cliente,
+    @InjectModel(AvaliacaoAtendimento)
+    private readonly avaliacaoModel: typeof AvaliacaoAtendimento,
   ) {}
 
   // Soma minutos a uma hora "HH:mm" e devolve "HH:mm".
@@ -141,12 +145,36 @@ export class AgendamentoService {
 
   async findOne(id: number) {
     const agendamento = await this.agendamentoModel.findByPk(id, {
-      include: [Cliente, Servico],
+      include: [Cliente, Servico, AvaliacaoAtendimento],
     });
     if (!agendamento) {
       throw new NotFoundException('Agendamento não encontrado.');
     }
     return agendamento;
+  }
+
+  // Conclui o atendimento e registra (ou atualiza) a avaliação.
+  async concluir(id: number, dto: ConcluirAgendamentoDto) {
+    const agendamento = await this.findOne(id);
+
+    const existente = await this.avaliacaoModel.findOne({
+      where: { agendamento_id: id },
+    });
+    if (existente) {
+      await existente.update({
+        avaliacao: dto.avaliacao,
+        observacao: dto.observacao ?? null,
+      });
+    } else {
+      await this.avaliacaoModel.create({
+        agendamento_id: id,
+        avaliacao: dto.avaliacao,
+        observacao: dto.observacao ?? null,
+      });
+    }
+
+    await agendamento.update({ status: StatusAgendamento.CONCLUIDO });
+    return this.findOne(id);
   }
 
   async update(id: number, dto: UpdateAgendamentoDto) {

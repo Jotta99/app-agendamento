@@ -1,0 +1,22 @@
+# Sobe APENAS 1 container com tudo: front + API (NestJS serve os dois).
+# A conexão com o banco vem 100% das variáveis de ambiente (server/.env) —
+# use um Postgres externo (sua máquina ou um gerenciado).
+#
+#   docker compose up --build
+#
+# Abra http://localhost:3000  (tela + API). Login: senha = AUTH_SENHA do .env.
+
+services:
+  app:
+    build: .
+    env_file:
+      - ./server/.env
+    environment:
+      # Acessa o Postgres da máquina host (sobrescreve o DB_HOST do .env, que
+      # localmente costuma ser "localhost"). Para um banco remoto/gerenciado,
+      # remova esta linha e defina DB_HOST direto no server/.env.
+      DB_HOST: host.docker.internal
+    extra_hosts:
+      - 'host.docker.internal:host-gateway'
+    ports:
+      - '3000:3000'
