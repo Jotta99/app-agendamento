@@ -25,7 +25,7 @@ export const envValidationSchema = Joi.object({
 
   AUTH_SENHA: Joi.string().min(6).required(),
 
-  // URL pública para o auto-ping (keep-alive). Opcional — no Render pode usar
-  // a RENDER_EXTERNAL_URL automática. Sem isso, o keep-alive fica desligado.
+  // URL pública do app para o auto-ping (keep-alive) e para o CORS da própria
+  // origem. Opcional — sem isso, o keep-alive fica desligado.
   SELF_PING_URL: Joi.string().uri().optional(),
 });

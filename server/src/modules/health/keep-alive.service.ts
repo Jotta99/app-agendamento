@@ -9,8 +9,8 @@ import { ConfigService } from '@nestjs/config';
 const INTERVALO_MS = 5 * 60 * 1000; // 5 minutos
 
 // Faz auto-ping na própria rota /api/health a cada 5 min, usando a URL pública.
-// Como o Render hiberna serviços sem tráfego de entrada, o ping (que sai e volta
-// pela URL externa) reinicia o timer de inatividade e mantém o serviço acordado.
+// Em hospedagens que hibernam serviços sem tráfego de entrada, o ping (que sai e
+// volta pela URL externa) reinicia o timer de inatividade e mantém o app acordado.
 @Injectable()
 export class KeepAliveService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger('KeepAlive');
@@ -19,11 +19,9 @@ export class KeepAliveService implements OnModuleInit, OnModuleDestroy {
   constructor(private readonly config: ConfigService) {}
 
   onModuleInit() {
-    // Use SELF_PING_URL (ou RENDER_EXTERNAL_URL, que o Render injeta sozinho).
-    // Sem URL pública definida, o keep-alive fica desligado (ex.: local).
-    const base =
-      this.config.get<string>('SELF_PING_URL') ||
-      process.env.RENDER_EXTERNAL_URL;
+    // URL pública para o auto-ping. Sem SELF_PING_URL definida, o keep-alive
+    // fica desligado (ex.: local).
+    const base = this.config.get<string>('SELF_PING_URL');
 
     if (!base) {
       this.logger.log(

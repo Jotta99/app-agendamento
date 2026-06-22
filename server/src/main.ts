@@ -60,7 +60,7 @@ async function bootstrap() {
   const logger = new Logger('Bootstrap');
 
   // Tenta garantir a existência do banco antes de subir. Não é fatal: em
-  // Postgres gerenciado (Render, etc.) o banco já existe e o acesso ao banco
+  // Postgres gerenciado/hospedado o banco já existe e o acesso ao banco
   // administrativo "postgres" costuma ser bloqueado — nesse caso, seguimos.
   try {
     await ensureDatabase(logger);
@@ -94,16 +94,28 @@ async function bootstrap() {
   // front (Vue + Google Fonts) — evita bloquear scripts/estilos do app.
   app.use(helmet({ contentSecurityPolicy: false }));
 
-  // CORS: libera a origem configurada + localhost + IPs de rede local
-  // (para acessar do celular/tablet pelo IP), bloqueando origens externas.
-  const origemConfigurada = config.get<string>('CORS_ORIGIN');
+  // CORS: libera a origem configurada (CORS_ORIGIN), a URL pública do keep-alive
+  // (SELF_PING_URL) e localhost/IPs de rede local. Como o front é servido na
+  // MESMA origem, em produção defina CORS_ORIGIN com a URL pública do app —
+  // o navegador manda esse Origin nas chamadas à /api.
+  const origensPermitidas = [
+    config.get<string>('CORS_ORIGIN'),
+    config.get<string>('SELF_PING_URL'),
+  ]
+    .filter(Boolean)
+    .map((o) => (o as string).replace(/\/+$/, ''));
+
   const redeLocal =
     /^https?:\/\/(localhost|127\.0\.0\.1|\[::1\]|10\.\d{1,3}\.\d{1,3}\.\d{1,3}|192\.168\.\d{1,3}\.\d{1,3}|172\.(1[6-9]|2\d|3[01])\.\d{1,3}\.\d{1,3})(:\d+)?$/;
 
   app.enableCors({
     origin: (origin, callback) => {
       // Sem origin (mesma origem, curl, apps nativos) é permitido.
-      if (!origin || origin === origemConfigurada || redeLocal.test(origin)) {
+      if (
+        !origin ||
+        origensPermitidas.includes(origin.replace(/\/+$/, '')) ||
+        redeLocal.test(origin)
+      ) {
         return callback(null, true);
       }
       return callback(new Error('Origem não permitida pelo CORS.'), false);
