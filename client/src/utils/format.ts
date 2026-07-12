@@ -38,6 +38,14 @@ export function formatarDataCurta(iso: string): string {
   return dataLocal(iso).toLocaleDateString('pt-BR');
 }
 
+// "AAAA-MM-DD" -> "19/06"
+export function formatarDataDiaMes(iso: string): string {
+  return dataLocal(iso).toLocaleDateString('pt-BR', {
+    day: '2-digit',
+    month: '2-digit',
+  });
+}
+
 // Date -> "AAAA-MM-DD" (fuso local).
 export function paraISO(d: Date): string {
   const off = d.getTimezoneOffset();

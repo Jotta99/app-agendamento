@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import type { Agendamento } from '@/types';
-import { formatarHora, formatarMoeda } from '@/utils/format';
+import { formatarHora, formatarMoeda, formatarDataDiaMes } from '@/utils/format';
 import BaseBadge from './base/BaseBadge.vue';
 
-defineProps<{ agendamento: Agendamento }>();
+// mostrarData: exibe a data junto ao serviço — útil em listas que misturam
+// vários dias (ex.: agendamentos pendentes de finalização).
+defineProps<{ agendamento: Agendamento; mostrarData?: boolean }>();
 defineEmits<{ (e: 'click'): void }>();
 </script>
 
@@ -35,6 +37,7 @@ defineEmits<{ (e: 'click'): void }>();
       </div>
       <p class="truncate text-sm text-muted">
         {{ agendamento.servico?.nome ?? 'Serviço' }}
+        <span v-if="mostrarData">· {{ formatarDataDiaMes(agendamento.data) }}</span>
       </p>
     </div>
 

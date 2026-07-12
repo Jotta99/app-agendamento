@@ -1,15 +1,16 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue';
-import type { Cliente, Servico } from '@/types';
+import type { Agendamento, Cliente, Servico } from '@/types';
 import { clienteService } from '@/services/cliente.service';
 import { servicoService } from '@/services/servico.service';
 import { agendamentoService } from '@/services/agendamento.service';
 import { useToast } from '@/composables/useToast';
-import { formatarMoeda, formatarDuracao } from '@/utils/format';
+import { formatarDuracao, formatarMoeda } from '@/utils/format';
 import BaseModal from '@/components/base/BaseModal.vue';
 import BaseDatePicker from '@/components/base/BaseDatePicker.vue';
 import TimeRangePicker from '@/components/base/TimeRangePicker.vue';
 import BaseTextarea from '@/components/base/BaseTextarea.vue';
+import BaseMoneyInput from '@/components/base/BaseMoneyInput.vue';
 import BaseButton from '@/components/base/BaseButton.vue';
 import PickerModal from '@/components/base/PickerModal.vue';
 import ClienteFormModal from './ClienteFormModal.vue';
@@ -19,6 +20,8 @@ const props = defineProps<{
   modelValue: boolean;
   dataInicial: string;
   horaInicial?: string;
+  // Quando presente, o modal edita este agendamento em vez de criar um novo.
+  agendamento?: Agendamento | null;
 }>();
 const emit = defineEmits<{
   (e: 'update:modelValue', v: boolean): void;
@@ -44,7 +47,11 @@ const form = ref({
   hora_inicio: props.horaInicial ?? '',
   hora_fim: '',
   observacao: '',
+  valor: null as number | null,
 });
+
+const modoEdicao = computed(() => !!props.agendamento);
+const titulo = computed(() => (modoEdicao.value ? 'Editar agendamento' : 'Novo agendamento'));
 
 async function carregarListas() {
   [clientes.value, servicos.value] = await Promise.all([
@@ -56,17 +63,28 @@ async function carregarListas() {
 watch(
   () => props.modelValue,
   (aberto) => {
-    if (aberto) {
-      form.value = {
-        cliente_id: null,
-        servico_id: null,
-        data: props.dataInicial,
-        hora_inicio: props.horaInicial ?? '',
-        hora_fim: '',
-        observacao: '',
-      };
-      carregarListas();
-    }
+    if (!aberto) return;
+    const a = props.agendamento;
+    form.value = a
+      ? {
+          cliente_id: a.cliente_id,
+          servico_id: a.servico_id,
+          data: a.data,
+          hora_inicio: a.hora_inicio.slice(0, 5),
+          hora_fim: a.hora_fim.slice(0, 5),
+          observacao: a.observacao ?? '',
+          valor: Number(a.valor),
+        }
+      : {
+          cliente_id: null,
+          servico_id: null,
+          data: props.dataInicial,
+          hora_inicio: props.horaInicial ?? '',
+          hora_fim: '',
+          observacao: '',
+          valor: null,
+        };
+    carregarListas();
   },
 );
 
@@ -86,7 +104,9 @@ const duracaoSelecionada = computed(() => {
 });
 
 // Início no passado (em relação a agora) -> agendamento retroativo (histórico).
+// Só se aplica à criação: o backend marca como concluído automaticamente.
 const ehRetroativo = computed(() => {
+  if (modoEdicao.value) return false;
   if (!form.value.data || !form.value.hora_inicio) return false;
   return (
     new Date(`${form.value.data}T${form.value.hora_inicio}`).getTime() <
@@ -102,8 +122,14 @@ function onClienteCriado(c: Cliente) {
 
 function onServicoCriado(s: Servico) {
   servicos.value.unshift(s);
-  form.value.servico_id = s.id;
+  selecionarServico(s);
   pickerServico.value = false;
+}
+
+// Ao trocar o serviço, sugere o valor dele — o usuário pode ajustar depois.
+function selecionarServico(s: Servico) {
+  form.value.servico_id = s.id;
+  form.value.valor = Number(s.valor);
 }
 
 function filtrarCliente(c: Cliente, q: string) {
@@ -129,26 +155,37 @@ async function salvar() {
   if (!form.value.hora_inicio || !form.value.hora_fim) {
     return erro('Escolha o horário.');
   }
+  if (form.value.valor == null || form.value.valor < 0) {
+    return erro('Informe o valor do atendimento.');
+  }
 
   salvando.value = true;
   try {
-    await agendamentoService.criar({
+    const payload = {
       cliente_id: form.value.cliente_id,
       servico_id: form.value.servico_id,
       data: form.value.data,
       hora_inicio: form.value.hora_inicio,
       hora_fim: form.value.hora_fim,
       observacao: form.value.observacao.trim() || undefined,
-    });
-    sucesso(
-      ehRetroativo.value
-        ? 'Atendimento registrado no histórico.'
-        : 'Agendamento criado.',
-    );
+      valor: form.value.valor,
+    };
+
+    if (modoEdicao.value && props.agendamento) {
+      await agendamentoService.atualizar(props.agendamento.id, payload);
+      sucesso('Agendamento atualizado.');
+    } else {
+      await agendamentoService.criar(payload);
+      sucesso(
+        ehRetroativo.value
+          ? 'Atendimento registrado no histórico.'
+          : 'Agendamento criado.',
+      );
+    }
     emit('salvo');
     emit('update:modelValue', false);
   } catch (e: any) {
-    erro(e.response?.data?.message ?? 'Erro ao criar agendamento.');
+    erro(e.response?.data?.message ?? 'Erro ao salvar agendamento.');
   } finally {
     salvando.value = false;
   }
@@ -162,7 +199,7 @@ const triggerClasse =
 <template>
   <BaseModal
     :model-value="modelValue"
-    title="Novo agendamento"
+    :title="titulo"
     @update:model-value="emit('update:modelValue', $event)"
   >
     <form class="space-y-4" @submit.prevent="salvar">
@@ -205,22 +242,22 @@ const triggerClasse =
         v-model:fim="form.hora_fim"
         :data="form.data"
         :duracao-padrao="servicoSelecionado?.duracao_minuto ?? 30"
+        :ignorar-agendamento-id="agendamento?.id"
         label="Horário"
         required
       />
 
-      <!-- Resumo do intervalo -->
-      <div
-        v-if="servicoSelecionado && duracaoSelecionada > 0"
-        class="flex items-center justify-between rounded-xl bg-primary-soft/60 px-4 py-3 text-sm"
-      >
-        <span class="text-primary-deep">
-          Duração
-          <span class="font-medium">{{ formatarDuracao(duracaoSelecionada) }}</span>
-        </span>
-        <span class="font-semibold text-primary-deep">
-          {{ formatarMoeda(servicoSelecionado.valor) }}
-        </span>
+      <!-- Duração + valor (editável) -->
+      <div class="grid grid-cols-2 gap-3">
+        <div class="flex flex-col justify-center rounded-xl bg-primary-soft/60 px-4 py-2.5">
+          <span class="text-xs font-semibold uppercase tracking-wide text-primary-deep/70">
+            Duração
+          </span>
+          <span class="font-display text-base font-semibold text-primary-deep">
+            {{ duracaoSelecionada > 0 ? formatarDuracao(duracaoSelecionada) : '—' }}
+          </span>
+        </div>
+        <BaseMoneyInput v-model="form.valor" label="Valor" required placeholder="0,00" />
       </div>
 
       <BaseTextarea v-model="form.observacao" label="Observação" :rows="2" placeholder="Opcional" />
@@ -250,7 +287,7 @@ const triggerClasse =
           Cancelar
         </BaseButton>
         <BaseButton variant="primary" block type="button" :loading="salvando" @click="salvar">
-          {{ ehRetroativo ? 'Registrar' : 'Agendar' }}
+          {{ modoEdicao ? 'Salvar alterações' : ehRetroativo ? 'Registrar' : 'Agendar' }}
         </BaseButton>
       </div>
     </template>
@@ -287,7 +324,7 @@ const triggerClasse =
       :get-subtitle="(s) => formatarDuracao(s.duracao_minuto)"
       :get-trailing="(s) => formatarMoeda(s.valor)"
       :filtro="filtrarServico"
-      @select="(s) => (form.servico_id = s.id)"
+      @select="selecionarServico"
       @novo="novoServico = true"
     />
 

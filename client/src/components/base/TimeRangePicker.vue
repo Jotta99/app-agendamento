@@ -14,6 +14,9 @@ const props = withDefaults(
     inicioDia?: string;
     fimDia?: string;
     passo?: number;
+    // Ao editar um agendamento existente, ignora ele mesmo na checagem de
+    // horários ocupados (senão o próprio intervalo apareceria bloqueado).
+    ignorarAgendamentoId?: number;
   }>(),
   {
     duracaoPadrao: 30,
@@ -52,7 +55,10 @@ async function carregarOcupados() {
   try {
     const itens = await agendamentoService.listarPorData(props.data);
     ocupados.value = itens
-      .filter((a) => a.status !== 'CANCELADO')
+      .filter(
+        (a) =>
+          a.status !== 'CANCELADO' && a.id !== props.ignorarAgendamentoId,
+      )
       .map((a) => ({ ini: toMin(a.hora_inicio), fim: toMin(a.hora_fim) }));
   } finally {
     carregando.value = false;

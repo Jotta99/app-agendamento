@@ -3,6 +3,7 @@ import { ref, watch } from 'vue';
 import type { Servico } from '@/types';
 import { servicoService } from '@/services/servico.service';
 import { useToast } from '@/composables/useToast';
+import { useConfirm } from '@/composables/useConfirm';
 import BaseModal from '@/components/base/BaseModal.vue';
 import BaseInput from '@/components/base/BaseInput.vue';
 import BaseStepper from '@/components/base/BaseStepper.vue';
@@ -14,10 +15,13 @@ const props = defineProps<{ modelValue: boolean; servico?: Servico | null }>();
 const emit = defineEmits<{
   (e: 'update:modelValue', v: boolean): void;
   (e: 'salvo', servico: Servico): void;
+  (e: 'excluido'): void;
 }>();
 
 const { sucesso, erro } = useToast();
+const { confirmar } = useConfirm();
 const salvando = ref(false);
+const excluindo = ref(false);
 
 // Minutos disponíveis (de 5 em 5).
 const minutosChips = Array.from({ length: 12 }, (_, i) => i * 5);
@@ -78,6 +82,29 @@ async function salvar() {
     salvando.value = false;
   }
 }
+
+async function excluir() {
+  if (!props.servico) return;
+  const ok = await confirmar({
+    titulo: 'Excluir serviço',
+    mensagem: `Excluir "${props.servico.nome}"? O histórico de agendamentos é mantido.`,
+    confirmarLabel: 'Excluir',
+    perigo: true,
+  });
+  if (!ok) return;
+
+  excluindo.value = true;
+  try {
+    await servicoService.remover(props.servico.id);
+    sucesso('Serviço excluído.');
+    emit('excluido');
+    emit('update:modelValue', false);
+  } catch (e: any) {
+    erro(e.response?.data?.message ?? 'Erro ao excluir serviço.');
+  } finally {
+    excluindo.value = false;
+  }
+}
 </script>
 
 <template>
@@ -123,6 +150,13 @@ async function salvar() {
       </div>
 
       <BaseMoneyInput v-model="form.valor" label="Valor" required placeholder="0,00" />
+
+      <div v-if="servico" class="border-t border-line pt-4">
+        <BaseButton variant="danger" block type="button" :loading="excluindo" @click="excluir">
+          Excluir serviço
+        </BaseButton>
+      </div>
+
       <button type="submit" class="hidden"></button>
     </form>
 

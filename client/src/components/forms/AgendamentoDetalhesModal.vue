@@ -15,6 +15,7 @@ import BaseBadge from '@/components/base/BaseBadge.vue';
 import BaseAvatar from '@/components/base/BaseAvatar.vue';
 import BaseStars from '@/components/base/BaseStars.vue';
 import AvaliacaoModal from './AvaliacaoModal.vue';
+import AgendamentoFormModal from './AgendamentoFormModal.vue';
 
 const props = defineProps<{
   modelValue: boolean;
@@ -29,8 +30,14 @@ const { sucesso, erro } = useToast();
 const { confirmar } = useConfirm();
 const processando = ref(false);
 const avaliarAberto = ref(false);
+const editarAberto = ref(false);
 
 function onConcluido() {
+  emit('alterado');
+  emit('update:modelValue', false);
+}
+
+function onEditado() {
   emit('alterado');
   emit('update:modelValue', false);
 }
@@ -101,7 +108,7 @@ async function excluir() {
       <!-- Cliente -->
       <div class="flex items-center gap-3">
         <BaseAvatar :nome="agendamento.cliente?.nome" size="lg" />
-        <div class="min-w-0">
+        <div class="min-w-0 flex-1">
           <p class="truncate text-lg font-semibold text-ink">
             {{ agendamento.cliente?.nome }}
           </p>
@@ -109,7 +116,23 @@ async function excluir() {
             {{ agendamento.cliente.instagram }}
           </p>
         </div>
-        <BaseBadge :status="agendamento.status" class="ml-auto" />
+        <div class="flex shrink-0 items-center gap-2">
+          <button
+            class="rounded-full p-2 text-muted transition hover:bg-primary-soft hover:text-primary-deep"
+            title="Editar agendamento"
+            @click="editarAberto = true"
+          >
+            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="1.8"
+                d="M11 4H6a2 2 0 00-2 2v12a2 2 0 002 2h12a2 2 0 002-2v-5m-1.5-9.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"
+              />
+            </svg>
+          </button>
+          <BaseBadge :status="agendamento.status" />
+        </div>
       </div>
 
       <!-- Infos -->
@@ -165,7 +188,7 @@ async function excluir() {
 
       <!-- Pagamento -->
       <button
-        class="flex w-full items-center justify-between rounded-xl border border-black/10 px-4 py-3 text-sm transition hover:bg-surface"
+        class="flex w-full items-center justify-between rounded-xl border border-line px-4 py-3 text-sm transition hover:bg-surface"
         :disabled="processando"
         @click="alternarPago"
       >
@@ -226,6 +249,14 @@ async function excluir() {
       v-model="avaliarAberto"
       :agendamento-id="agendamento?.id ?? null"
       @concluido="onConcluido"
+    />
+
+    <!-- Editar agendamento -->
+    <AgendamentoFormModal
+      v-model="editarAberto"
+      :agendamento="agendamento"
+      :data-inicial="agendamento?.data ?? ''"
+      @salvo="onEditado"
     />
   </BaseModal>
 </template>

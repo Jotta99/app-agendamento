@@ -57,6 +57,21 @@ export interface ResumoDia {
   agendamentos: Agendamento[];
 }
 
+export interface VisaoGeral {
+  inicio: string;
+  fim: string;
+  por_dia: Record<string, { total: number; receita: number }>;
+  por_status: Record<StatusAgendamento, number>;
+  por_servico: {
+    servico_id: number;
+    nome: string;
+    total: number;
+    receita: number;
+  }[];
+  pagamento: { pago: number; a_receber: number };
+  totais: { atendimentos: number; receita: number; ticket_medio: number };
+}
+
 export interface Usuario {
   nome: string;
 }

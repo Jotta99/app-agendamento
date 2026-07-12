@@ -102,6 +102,7 @@ onMounted(carregar);
       v-model="modalAberto"
       :servico="emEdicao"
       @salvo="carregar"
+      @excluido="carregar"
     />
   </AppLayout>
 </template>

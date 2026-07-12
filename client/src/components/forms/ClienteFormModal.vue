@@ -3,6 +3,7 @@ import { ref, watch } from 'vue';
 import type { Cliente } from '@/types';
 import { clienteService } from '@/services/cliente.service';
 import { useToast } from '@/composables/useToast';
+import { useConfirm } from '@/composables/useConfirm';
 import BaseModal from '@/components/base/BaseModal.vue';
 import BaseInput from '@/components/base/BaseInput.vue';
 import BasePhoneInput from '@/components/base/BasePhoneInput.vue';
@@ -13,10 +14,13 @@ const props = defineProps<{ modelValue: boolean; cliente?: Cliente | null }>();
 const emit = defineEmits<{
   (e: 'update:modelValue', v: boolean): void;
   (e: 'salvo', cliente: Cliente): void;
+  (e: 'excluido'): void;
 }>();
 
 const { sucesso, erro } = useToast();
+const { confirmar } = useConfirm();
 const salvando = ref(false);
+const excluindo = ref(false);
 const form = ref({ nome: '', telefone: '', instagram: '', observacao: '' });
 
 // Preenche o formulário ao abrir (novo ou edição).
@@ -59,6 +63,29 @@ async function salvar() {
     salvando.value = false;
   }
 }
+
+async function excluir() {
+  if (!props.cliente) return;
+  const ok = await confirmar({
+    titulo: 'Excluir cliente',
+    mensagem: `Excluir "${props.cliente.nome}"? O histórico de agendamentos dele é mantido.`,
+    confirmarLabel: 'Excluir',
+    perigo: true,
+  });
+  if (!ok) return;
+
+  excluindo.value = true;
+  try {
+    await clienteService.remover(props.cliente.id);
+    sucesso('Cliente excluído.');
+    emit('excluido');
+    emit('update:modelValue', false);
+  } catch (e: any) {
+    erro(e.response?.data?.message ?? 'Erro ao excluir cliente.');
+  } finally {
+    excluindo.value = false;
+  }
+}
 </script>
 
 <template>
@@ -72,6 +99,13 @@ async function salvar() {
       <BasePhoneInput v-model="form.telefone" label="Telefone" />
       <BaseInput v-model="form.instagram" label="Instagram" placeholder="@usuario" />
       <BaseTextarea v-model="form.observacao" label="Observação" placeholder="Preferências, alergias..." />
+
+      <div v-if="cliente" class="border-t border-line pt-4">
+        <BaseButton variant="danger" block type="button" :loading="excluindo" @click="excluir">
+          Excluir cliente
+        </BaseButton>
+      </div>
+
       <button type="submit" class="hidden"></button>
     </form>
 

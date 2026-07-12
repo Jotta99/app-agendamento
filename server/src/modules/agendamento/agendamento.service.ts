@@ -23,6 +23,15 @@ const STATUS_OCUPA_HORARIO = [
   StatusAgendamento.CONCLUIDO,
 ];
 
+// Cliente/Serviço podem ter sido excluídos (soft delete) sem afetar o
+// histórico: paranoid:false garante que os dados continuem aparecendo nos
+// agendamentos antigos mesmo depois da exclusão (só somem das listas/pickers
+// de cliente e serviço ativos, que consultam os models diretamente).
+const INCLUDE_RELACOES = [
+  { model: Cliente, paranoid: false },
+  { model: Servico, paranoid: false },
+];
+
 @Injectable()
 export class AgendamentoService {
   constructor(
@@ -126,7 +135,7 @@ export class AgendamentoService {
   findByDate(data: string) {
     return this.agendamentoModel.findAll({
       where: { data },
-      include: [Cliente, Servico],
+      include: INCLUDE_RELACOES,
       order: [['hora_inicio', 'ASC']],
     });
   }
@@ -135,7 +144,7 @@ export class AgendamentoService {
   findByRange(inicio: string, fim: string) {
     return this.agendamentoModel.findAll({
       where: { data: { [Op.between]: [inicio, fim] } },
-      include: [Cliente, Servico],
+      include: INCLUDE_RELACOES,
       order: [
         ['data', 'ASC'],
         ['hora_inicio', 'ASC'],
@@ -143,9 +152,26 @@ export class AgendamentoService {
     });
   }
 
+  // Agendamentos cujo horário já passou mas continuam como "AGENDADO" —
+  // precisam ser finalizados manualmente (concluir, marcar falta ou cancelar).
+  async pendentesFinalizacao() {
+    const agora = Date.now();
+    const candidatos = await this.agendamentoModel.findAll({
+      where: { status: StatusAgendamento.AGENDADO },
+      include: INCLUDE_RELACOES,
+      order: [
+        ['data', 'ASC'],
+        ['hora_inicio', 'ASC'],
+      ],
+    });
+    return candidatos.filter(
+      (a) => new Date(`${a.data}T${a.hora_fim}`).getTime() < agora,
+    );
+  }
+
   async findOne(id: number) {
     const agendamento = await this.agendamentoModel.findByPk(id, {
-      include: [Cliente, Servico, AvaliacaoAtendimento],
+      include: [...INCLUDE_RELACOES, AvaliacaoAtendimento],
     });
     if (!agendamento) {
       throw new NotFoundException('Agendamento não encontrado.');
@@ -180,27 +206,41 @@ export class AgendamentoService {
   async update(id: number, dto: UpdateAgendamentoDto) {
     const agendamento = await this.findOne(id);
 
-    // Recalcula hora_fim/valor se serviço ou horário mudarem.
-    let horaInicio = dto.hora_inicio ?? agendamento.hora_inicio;
-    let horaFim = agendamento.hora_fim;
-    let valor = agendamento.valor;
+    const horaInicio = dto.hora_inicio ?? agendamento.hora_inicio;
     const data = dto.data ?? agendamento.data;
+    let valor = agendamento.valor;
+    // Respeita a hora final explícita (igual ao create()); só recalcula pela
+    // duração do serviço se ela não vier no payload.
+    let horaFim = dto.hora_fim ?? agendamento.hora_fim;
 
-    if (dto.servico_id || dto.hora_inicio) {
+    const trocouServico =
+      !!dto.servico_id && dto.servico_id !== agendamento.servico_id;
+
+    if (trocouServico || (!dto.hora_fim && dto.hora_inicio)) {
       const servicoId = dto.servico_id ?? agendamento.servico_id;
       const servico = await this.servicoModel.findByPk(servicoId);
       if (!servico) {
         throw new NotFoundException('Serviço não encontrado.');
       }
-      horaFim = this.somaMinutos(horaInicio, servico.duracao_minuto);
-      // Mantém o valor original; só atualiza se o serviço foi trocado.
-      if (dto.servico_id && dto.servico_id !== agendamento.servico_id) {
+      // Serviço trocado sugere o novo valor (a menos que dto.valor o sobrescreva abaixo).
+      if (trocouServico) {
         valor = servico.valor;
+      }
+      // Início mudou sem hora final explícita: recalcula pela duração do serviço.
+      if (!dto.hora_fim && dto.hora_inicio) {
+        horaFim = this.somaMinutos(horaInicio, servico.duracao_minuto);
       }
     }
 
-    if (dto.data || dto.hora_inicio || dto.servico_id) {
+    if (dto.data || dto.hora_inicio || dto.hora_fim || dto.servico_id) {
       await this.garantirSemConflito(data, horaInicio, horaFim, id);
+    }
+
+    // Valor informado manualmente tem prioridade máxima sobre o cálculo
+    // automático (permite ajustar o preço deste atendimento sem alterar o
+    // serviço, ex.: desconto ou cortesia).
+    if (dto.valor !== undefined) {
+      valor = dto.valor;
     }
 
     await agendamento.update({
@@ -248,6 +288,82 @@ export class AgendamentoService {
       receita_prevista: receitaPrevista,
       proximo_atendimento: proximo,
       agendamentos,
+    };
+  }
+
+  // Agregações para as visualizações da Dashboard (semana/mês).
+  async visaoGeral(inicio: string, fim: string) {
+    const agendamentos = await this.findByRange(inicio, fim);
+
+    // Ativos = geraram/vão gerar receita (exclui cancelado e faltou).
+    const ativos = agendamentos.filter((a) =>
+      STATUS_OCUPA_HORARIO.includes(a.status),
+    );
+
+    // Por dia: total de atendimentos e receita (só dias com movimento).
+    const porDia: Record<string, { total: number; receita: number }> = {};
+    for (const a of ativos) {
+      const dia = (porDia[a.data] ??= { total: 0, receita: 0 });
+      dia.total += 1;
+      dia.receita += Number(a.valor);
+    }
+
+    // Por status: contagem no período inteiro (todos os status).
+    const porStatus: Record<string, number> = {
+      AGENDADO: 0,
+      CONCLUIDO: 0,
+      CANCELADO: 0,
+      FALTOU: 0,
+    };
+    for (const a of agendamentos) {
+      porStatus[a.status] += 1;
+    }
+
+    // Por serviço: ranking por receita (top 5), só atendimentos ativos.
+    const porServicoMap = new Map<
+      number,
+      { servico_id: number; nome: string; total: number; receita: number }
+    >();
+    for (const a of ativos) {
+      const nome = a.servico?.nome ?? 'Serviço removido';
+      const item = porServicoMap.get(a.servico_id) ?? {
+        servico_id: a.servico_id,
+        nome,
+        total: 0,
+        receita: 0,
+      };
+      item.total += 1;
+      item.receita += Number(a.valor);
+      porServicoMap.set(a.servico_id, item);
+    }
+    const porServico = [...porServicoMap.values()]
+      .sort((x, y) => y.receita - x.receita)
+      .slice(0, 5);
+
+    // Pagamento: quanto já foi recebido vs. quanto falta receber.
+    const pagamento = ativos.reduce(
+      (acc, a) => {
+        if (a.pago) acc.pago += Number(a.valor);
+        else acc.a_receber += Number(a.valor);
+        return acc;
+      },
+      { pago: 0, a_receber: 0 },
+    );
+
+    const receitaTotal = ativos.reduce((s, a) => s + Number(a.valor), 0);
+
+    return {
+      inicio,
+      fim,
+      por_dia: porDia,
+      por_status: porStatus,
+      por_servico: porServico,
+      pagamento,
+      totais: {
+        atendimentos: ativos.length,
+        receita: receitaTotal,
+        ticket_medio: ativos.length ? receitaTotal / ativos.length : 0,
+      },
     };
   }
 }

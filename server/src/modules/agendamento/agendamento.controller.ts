@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Delete,
@@ -50,6 +51,21 @@ export class AgendamentoController {
   @Get('resumo')
   resumo(@Query('data') data?: string) {
     return this.agendamentoService.resumoDoDia(data || hoje());
+  }
+
+  // Agendamentos com horário já passado e ainda não finalizados.
+  @Get('pendentes')
+  pendentes() {
+    return this.agendamentoService.pendentesFinalizacao();
+  }
+
+  // Visualizações agregadas da Dashboard (semana/mês). ?inicio=&fim= obrigatórios.
+  @Get('visao-geral')
+  visaoGeral(@Query('inicio') inicio?: string, @Query('fim') fim?: string) {
+    if (!inicio || !fim) {
+      throw new BadRequestException('Informe "inicio" e "fim" (AAAA-MM-DD).');
+    }
+    return this.agendamentoService.visaoGeral(inicio, fim);
   }
 
   @Get(':id')

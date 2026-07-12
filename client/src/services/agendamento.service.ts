@@ -1,5 +1,5 @@
 import api from './api';
-import type { Agendamento, ResumoDia, StatusAgendamento } from '@/types';
+import type { Agendamento, ResumoDia, StatusAgendamento, VisaoGeral } from '@/types';
 
 export interface CriarAgendamentoPayload {
   cliente_id: number;
@@ -15,9 +15,11 @@ export interface AtualizarAgendamentoPayload {
   servico_id?: number;
   data?: string;
   hora_inicio?: string;
+  hora_fim?: string;
   observacao?: string;
   status?: StatusAgendamento;
   pago?: boolean;
+  valor?: number;
 }
 
 export const agendamentoService = {
@@ -35,6 +37,14 @@ export const agendamentoService = {
     return api
       .get<ResumoDia>('/agendamento/resumo', { params: { data } })
       .then((r) => r.data);
+  },
+  visaoGeral(inicio: string, fim: string) {
+    return api
+      .get<VisaoGeral>('/agendamento/visao-geral', { params: { inicio, fim } })
+      .then((r) => r.data);
+  },
+  pendentes() {
+    return api.get<Agendamento[]>('/agendamento/pendentes').then((r) => r.data);
   },
   obter(id: number) {
     return api.get<Agendamento>(`/agendamento/${id}`).then((r) => r.data);
