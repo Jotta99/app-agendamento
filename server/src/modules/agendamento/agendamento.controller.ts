@@ -59,6 +59,12 @@ export class AgendamentoController {
     return this.agendamentoService.pendentesFinalizacao();
   }
 
+  // Atendimentos concluídos e ainda não pagos (a receber).
+  @Get('nao-pagos')
+  naoPagos() {
+    return this.agendamentoService.naoPagos();
+  }
+
   // Visualizações agregadas da Dashboard (semana/mês). ?inicio=&fim= obrigatórios.
   @Get('visao-geral')
   visaoGeral(@Query('inicio') inicio?: string, @Query('fim') fim?: string) {

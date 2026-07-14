@@ -120,7 +120,8 @@ export class AgendamentoService {
       hora_inicio: dto.hora_inicio,
       hora_fim: horaFim,
       // Snapshot do valor: alterações futuras no serviço não afetam este.
-      valor: servico.valor,
+      // Um valor informado manualmente tem prioridade sobre o do serviço.
+      valor: dto.valor ?? servico.valor,
       observacao: dto.observacao ?? null,
       status: retroativo
         ? StatusAgendamento.CONCLUIDO
@@ -167,6 +168,20 @@ export class AgendamentoService {
     return candidatos.filter(
       (a) => new Date(`${a.data}T${a.hora_fim}`).getTime() < agora,
     );
+  }
+
+  // Atendimentos já concluídos e ainda sem pagamento registrado ("a receber").
+  // Não inclui AGENDADO: aqueles ainda vão acontecer, então "não pago" é
+  // esperado e não é uma pendência de cobrança.
+  naoPagos() {
+    return this.agendamentoModel.findAll({
+      where: { status: StatusAgendamento.CONCLUIDO, pago: false },
+      include: INCLUDE_RELACOES,
+      order: [
+        ['data', 'ASC'],
+        ['hora_inicio', 'ASC'],
+      ],
+    });
   }
 
   async findOne(id: number) {

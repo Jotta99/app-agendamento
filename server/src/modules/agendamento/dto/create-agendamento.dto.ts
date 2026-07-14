@@ -1,10 +1,12 @@
 import {
   IsInt,
   IsNotEmpty,
+  IsNumber,
   IsOptional,
   IsString,
   Matches,
   MaxLength,
+  Min,
 } from 'class-validator';
 
 export class CreateAgendamentoDto {
@@ -40,4 +42,11 @@ export class CreateAgendamentoDto {
   @IsString()
   @MaxLength(500)
   observacao?: string;
+
+  // Permite sobrescrever manualmente o valor sugerido pelo serviço
+  // (ex.: desconto, cortesia) já na criação do agendamento.
+  @IsOptional()
+  @IsNumber({ maxDecimalPlaces: 2 }, { message: 'Valor inválido.' })
+  @Min(0, { message: 'O valor não pode ser negativo.' })
+  valor?: number;
 }

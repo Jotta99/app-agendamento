@@ -8,6 +8,7 @@ export interface CriarAgendamentoPayload {
   hora_inicio: string;
   hora_fim?: string;
   observacao?: string;
+  valor?: number;
 }
 
 export interface AtualizarAgendamentoPayload {
@@ -45,6 +46,9 @@ export const agendamentoService = {
   },
   pendentes() {
     return api.get<Agendamento[]>('/agendamento/pendentes').then((r) => r.data);
+  },
+  naoPagos() {
+    return api.get<Agendamento[]>('/agendamento/nao-pagos').then((r) => r.data);
   },
   obter(id: number) {
     return api.get<Agendamento>(`/agendamento/${id}`).then((r) => r.data);

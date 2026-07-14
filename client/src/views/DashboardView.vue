@@ -41,12 +41,19 @@ const resumo = ref<ResumoDia | null>(null);
 const visao = ref<VisaoGeral | null>(null);
 const visaoSemana = ref<VisaoGeral | null>(null);
 const pendentes = ref<Agendamento[]>([]);
+const naoPagos = ref<Agendamento[]>([]);
 const periodo = ref<'semana' | 'mes'>('semana');
 const hoje = hojeISO();
 
 const novoAberto = ref(false);
 const detalhesAberto = ref(false);
 const selecionado = ref<Agendamento | null>(null);
+
+// No mobile, listas de alerta mostram só os primeiros itens (expande sob demanda)
+// para não empurrar o resto do dashboard pra muito longe do topo.
+const LIMITE_PREVIA = 3;
+const pendentesExpandido = ref(false);
+const naoPagosExpandido = ref(false);
 
 async function carregar() {
   carregando.value = true;
@@ -76,10 +83,20 @@ async function carregarPendentes() {
   }
 }
 
+// Atendimentos concluídos e ainda sem pagamento registrado (a receber).
+async function carregarNaoPagos() {
+  try {
+    naoPagos.value = await agendamentoService.naoPagos();
+  } catch (e: any) {
+    erro(e.response?.data?.message ?? 'Erro ao carregar pagamentos pendentes.');
+  }
+}
+
 // Recarrega tudo que pode ter mudado após criar/editar/concluir um agendamento.
 function atualizarTudo() {
   carregar();
   carregarPendentes();
+  carregarNaoPagos();
   carregarSemana().then(carregarPeriodo);
 }
 
@@ -125,6 +142,18 @@ function toMin(hora: string): number {
   return h * 60 + m;
 }
 
+// Soma total ainda a receber (atendimentos concluídos e não pagos).
+const totalAReceber = computed(() =>
+  naoPagos.value.reduce((soma, a) => soma + Number(a.valor), 0),
+);
+
+const pendentesVisiveis = computed(() =>
+  pendentesExpandido.value ? pendentes.value : pendentes.value.slice(0, LIMITE_PREVIA),
+);
+const naoPagosVisiveis = computed(() =>
+  naoPagosExpandido.value ? naoPagos.value : naoPagos.value.slice(0, LIMITE_PREVIA),
+);
+
 // Receita dos últimos 7 dias para o gráfico de barras (sempre semanal).
 const diasGrafico = computed(() => {
   if (!visaoSemana.value) return [];
@@ -147,7 +176,12 @@ function abrirDetalhes(a: Agendamento) {
 }
 
 onMounted(async () => {
-  await Promise.all([carregar(), carregarSemana(), carregarPendentes()]);
+  await Promise.all([
+    carregar(),
+    carregarSemana(),
+    carregarPendentes(),
+    carregarNaoPagos(),
+  ]);
   await carregarPeriodo();
 });
 </script>
@@ -165,7 +199,8 @@ onMounted(async () => {
         </h1>
         <p class="mt-1.5 capitalize text-muted">{{ formatarDataExtensa(hoje) }}</p>
       </div>
-      <BaseButton variant="primary" @click="novoAberto = true">
+      <!-- No mobile o CTA vira botão flutuante (mais alcançável com o polegar). -->
+      <BaseButton variant="primary" class="hidden lg:inline-flex" @click="novoAberto = true">
         <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
         </svg>
@@ -176,32 +211,84 @@ onMounted(async () => {
     <LoadingSpinner v-if="carregando" />
 
     <template v-else-if="resumo">
-      <!-- Pendentes de finalização: horário já passou, status ainda "Agendado" -->
-      <div v-if="pendentes.length" class="mb-6 rounded-2xl border border-gold/40 bg-gold/10 p-4 sm:p-5">
-        <div class="flex items-start gap-3">
-          <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gold/20 text-gold">
-            <svg class="h-[18px] w-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 8v4l2 2m6-2a8 8 0 11-3.3-6.5M20 4v4h-4" />
-            </svg>
-          </span>
-          <div class="min-w-0 flex-1">
-            <h2 class="font-display text-base font-semibold text-ink">
-              {{ pendentes.length }} agendamento{{ pendentes.length === 1 ? '' : 's' }} para finalizar
-            </h2>
-            <p class="mt-0.5 text-sm text-muted">
-              O horário já passou e ainda {{ pendentes.length === 1 ? 'consta' : 'constam' }} como
-              agendado. Marque como concluído, falta ou cancele.
-            </p>
+      <!-- Precisa de atenção: pendências de finalização + pagamentos em aberto -->
+      <div v-if="pendentes.length || naoPagos.length" class="mb-6 space-y-3">
+        <p class="text-[11px] font-semibold uppercase tracking-[0.2em] text-gold">
+          Precisa de atenção
+        </p>
+
+        <!-- Pendentes de finalização: horário já passou, status ainda "Agendado" -->
+        <div v-if="pendentes.length" class="rounded-2xl border border-gold/40 bg-gold/10 p-4 sm:p-5">
+          <div class="flex items-start gap-3">
+            <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gold/20 text-gold">
+              <svg class="h-[18px] w-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 8v4l2 2m6-2a8 8 0 11-3.3-6.5M20 4v4h-4" />
+              </svg>
+            </span>
+            <div class="min-w-0 flex-1">
+              <h2 class="font-display text-base font-semibold text-ink">
+                {{ pendentes.length }} agendamento{{ pendentes.length === 1 ? '' : 's' }} para finalizar
+              </h2>
+              <p class="mt-0.5 text-sm text-muted">
+                O horário já passou e ainda {{ pendentes.length === 1 ? 'consta' : 'constam' }} como
+                agendado.
+              </p>
+            </div>
           </div>
+          <div class="stagger mt-4 space-y-2">
+            <AppointmentCard
+              v-for="a in pendentesVisiveis"
+              :key="a.id"
+              :agendamento="a"
+              mostrar-data
+              @click="abrirDetalhes(a)"
+            />
+          </div>
+          <button
+            v-if="pendentes.length > LIMITE_PREVIA"
+            type="button"
+            class="mt-3 w-full rounded-xl border border-gold/30 py-2 text-center text-sm font-semibold text-gold transition hover:bg-gold/15"
+            @click="pendentesExpandido = !pendentesExpandido"
+          >
+            {{ pendentesExpandido ? 'Ver menos' : `Ver mais ${pendentes.length - LIMITE_PREVIA}` }}
+          </button>
         </div>
-        <div class="stagger mt-4 space-y-2">
-          <AppointmentCard
-            v-for="a in pendentes"
-            :key="a.id"
-            :agendamento="a"
-            mostrar-data
-            @click="abrirDetalhes(a)"
-          />
+
+        <!-- A receber: atendimentos concluídos sem pagamento registrado -->
+        <div v-if="naoPagos.length" class="rounded-2xl border border-gold/40 bg-gold/10 p-4 sm:p-5">
+          <div class="flex items-start gap-3">
+            <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gold/20 text-gold">
+              <svg class="h-[18px] w-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 8c-1.66 0-3 .9-3 2s1.34 2 3 2 3 .9 3 2-1.34 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V6m0 2v8m0 0v2m0-2c-1.11 0-2.08-.402-2.599-1" />
+              </svg>
+            </span>
+            <div class="min-w-0 flex-1">
+              <h2 class="tnum font-display text-base font-semibold text-ink">
+                {{ formatarMoeda(totalAReceber) }} a receber
+              </h2>
+              <p class="mt-0.5 text-sm text-muted">
+                {{ naoPagos.length }} atendimento{{ naoPagos.length === 1 ? '' : 's' }} concluído{{ naoPagos.length === 1 ? '' : 's' }}
+                ainda sem pagamento registrado.
+              </p>
+            </div>
+          </div>
+          <div class="stagger mt-4 space-y-2">
+            <AppointmentCard
+              v-for="a in naoPagosVisiveis"
+              :key="a.id"
+              :agendamento="a"
+              mostrar-data
+              @click="abrirDetalhes(a)"
+            />
+          </div>
+          <button
+            v-if="naoPagos.length > LIMITE_PREVIA"
+            type="button"
+            class="mt-3 w-full rounded-xl border border-gold/30 py-2 text-center text-sm font-semibold text-gold transition hover:bg-gold/15"
+            @click="naoPagosExpandido = !naoPagosExpandido"
+          >
+            {{ naoPagosExpandido ? 'Ver menos' : `Ver mais ${naoPagos.length - LIMITE_PREVIA}` }}
+          </button>
         </div>
       </div>
 
@@ -290,7 +377,35 @@ onMounted(async () => {
         </BaseCard>
       </div>
 
-      <!-- Visão geral: visualizações do negócio -->
+      <!-- Lista do dia (prioridade máxima no mobile: é o que se consulta o dia todo) -->
+      <div class="mt-8">
+        <h2 class="mb-3 text-sm font-semibold uppercase tracking-wide text-muted">
+          Atendimentos de hoje
+        </h2>
+        <div v-if="resumo.agendamentos.length" class="stagger space-y-3">
+          <AppointmentCard
+            v-for="(a, i) in resumo.agendamentos"
+            :key="a.id"
+            :agendamento="a"
+            :style="{ animationDelay: i * 50 + 'ms' }"
+            @click="abrirDetalhes(a)"
+          />
+        </div>
+        <EmptyState
+          v-else
+          titulo="Nenhum atendimento hoje"
+          descricao="Aproveite para organizar sua agenda ou criar um novo agendamento."
+        >
+          <template #action>
+            <BaseButton variant="primary" @click="novoAberto = true">
+              Novo agendamento
+            </BaseButton>
+          </template>
+        </EmptyState>
+      </div>
+
+      <!-- Visão geral: visualizações do negócio (mais "quando eu tiver um tempo" do
+           que "agora mesmo", por isso fica depois da lista do dia) -->
       <div class="mt-8">
         <div class="mb-3 flex flex-wrap items-center justify-between gap-3">
           <h2 class="text-sm font-semibold uppercase tracking-wide text-muted">
@@ -343,7 +458,9 @@ onMounted(async () => {
 
         <LoadingSpinner v-if="carregandoVisao && !visao" />
 
-        <div v-else class="grid gap-4 lg:grid-cols-2">
+        <!-- Cartões empilhados (largura total) no mobile; grade 2x2 no desktop.
+             items-start evita que um cartão estique até a altura do vizinho. -->
+        <div v-else class="grid items-start gap-4 lg:grid-cols-2">
           <!-- Movimento da semana (receita por dia, sempre últimos 7 dias) -->
           <BaseCard>
             <h3 class="mb-4 font-display text-base font-semibold text-ink">
@@ -380,34 +497,19 @@ onMounted(async () => {
           </BaseCard>
         </div>
       </div>
-
-      <!-- Lista do dia -->
-      <div class="mt-8">
-        <h2 class="mb-3 text-sm font-semibold uppercase tracking-wide text-muted">
-          Atendimentos de hoje
-        </h2>
-        <div v-if="resumo.agendamentos.length" class="stagger space-y-3">
-          <AppointmentCard
-            v-for="(a, i) in resumo.agendamentos"
-            :key="a.id"
-            :agendamento="a"
-            :style="{ animationDelay: i * 50 + 'ms' }"
-            @click="abrirDetalhes(a)"
-          />
-        </div>
-        <EmptyState
-          v-else
-          titulo="Nenhum atendimento hoje"
-          descricao="Aproveite para organizar sua agenda ou criar um novo agendamento."
-        >
-          <template #action>
-            <BaseButton variant="primary" @click="novoAberto = true">
-              Novo agendamento
-            </BaseButton>
-          </template>
-        </EmptyState>
-      </div>
     </template>
+
+    <!-- CTA flutuante — só no mobile, sempre ao alcance do polegar. -->
+    <button
+      type="button"
+      class="fixed bottom-24 right-5 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-primary to-primary-deep text-white shadow-glow transition active:scale-95 lg:hidden"
+      aria-label="Novo agendamento"
+      @click="novoAberto = true"
+    >
+      <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M12 4v16m8-8H4" />
+      </svg>
+    </button>
 
     <AgendamentoFormModal
       v-model="novoAberto"
